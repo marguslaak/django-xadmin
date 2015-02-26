@@ -11,6 +11,7 @@ from django.utils.encoding import smart_unicode
 
 from django.db.models.signals import post_syncdb
 from django.contrib.auth.models import Permission
+import sys
 
 import datetime
 import decimal
@@ -26,6 +27,10 @@ def add_view_permissions(sender, **kwargs):
     This syncdb hooks takes care of adding a view permission too all our
     content types.
     """
+    argv = sys.argv
+    if len(argv) > 1 and (argv[1] == "test" or argv[1] == "jenkins"):
+        return
+
     # for each of our content types
     for content_type in ContentType.objects.all():
         # build our permission slug
