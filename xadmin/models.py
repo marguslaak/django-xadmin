@@ -28,7 +28,9 @@ def add_view_permissions(sender, **kwargs):
     content types.
     """
     argv = sys.argv
-    if len(argv) > 1 and (argv[1] == "test" or argv[1] == "jenkins"):
+    permissions_with_tests = getattr(settings, "XADMIN_TEST_VIEW_PERMISSIONS", True)
+    if not permissions_with_tests and len(argv) > 1 \
+            and (argv[1] == "test" or argv[1] == "jenkins"):
         return
 
     # for each of our content types
