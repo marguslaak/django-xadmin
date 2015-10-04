@@ -125,7 +125,7 @@ class BookmarkPlugin(BaseAdminPlugin):
 class BookmarkView(ModelAdminView):
 
     @csrf_protect_m
-    @transaction.atomic()
+    @transaction.atomic
     def post(self, request):
         model_info = (self.opts.app_label, self.opts.model_name)
         url_name = 'xadmin:%s_%s_changelist' % model_info
