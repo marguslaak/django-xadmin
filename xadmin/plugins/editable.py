@@ -131,11 +131,7 @@ class EditPatchView(ModelFormAdminView, ListAdminView):
 
     @filter_hook
     @csrf_protect_m
-<<<<<<< HEAD
-    @transaction.atomic()
-=======
     @transaction.atomic
->>>>>>> f0f5a2db10ded50751ce808d74b853ab440114cf
     def post(self, request, object_id):
         model_fields = [f.name for f in self.opts.fields]
         fields = [f for f in request.POST.keys() if f in model_fields]
