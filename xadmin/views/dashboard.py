@@ -310,7 +310,7 @@ class ModelChoiceField(forms.ChoiceField):
 class ModelBaseWidget(BaseWidget):
 
     app_label = None
-    module_name = None
+    model_name = None
     model_perm = 'change'
     model = ModelChoiceField(label=_(u'Target Model'), widget=exwidgets.AdminSelectWidget)
 
