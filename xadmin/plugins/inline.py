@@ -2,11 +2,11 @@ import copy
 import inspect
 from django import forms
 from django.forms.formsets import all_valid, DELETION_FIELD_NAME
-from django.forms.models import inlineformset_factory, BaseInlineFormSet
+from django.forms.models import inlineformset_factory, BaseInlineFormSet, modelform_defines_fields
 from django.contrib.contenttypes.generic import BaseGenericInlineFormSet, generic_inlineformset_factory
-from django.contrib.auth import get_permission_codename
 from django.template import loader
 from django.template.loader import render_to_string
+from django.contrib.auth import get_permission_codename
 from xadmin.layout import FormHelper, Layout, flatatt, Container, Column, Field, Fieldset
 from xadmin.sites import site
 from xadmin.views import BaseAdminPlugin, ModelFormAdminView, DetailAdminView, filter_hook
@@ -142,7 +142,7 @@ class InlineModelAdmin(ModelFormAdminView):
     def get_formset(self, **kwargs):
         """Returns a BaseInlineFormSet class for use in admin add/change views."""
         if self.exclude is None:
-            exclude = ['dummy_72642']
+            exclude = []
         else:
             exclude = list(self.exclude)
         exclude.extend(self.get_readonly_fields())
@@ -158,6 +158,7 @@ class InlineModelAdmin(ModelFormAdminView):
             "form": self.form,
             "formset": self.formset,
             "fk_name": self.fk_name,
+            'fields': forms.ALL_FIELDS,
             "exclude": exclude,
             "formfield_callback": self.formfield_for_dbfield,
             "extra": self.extra,
@@ -165,6 +166,7 @@ class InlineModelAdmin(ModelFormAdminView):
             "can_delete": can_delete,
         }
         defaults.update(kwargs)
+
         return inlineformset_factory(self.parent_model, self.model, **defaults)
 
     @filter_hook
@@ -251,8 +253,9 @@ class InlineModelAdmin(ModelFormAdminView):
     def has_add_permission(self):
         if self.opts.auto_created:
             return self.has_change_permission()
-        return self.user.has_perm(
-            self.opts.app_label + '.' + get_permission_codename('add', self.opts))
+
+        codename = get_permission_codename('add', self.opts)
+        return self.user.has_perm("%s.%s" % (self.opts.app_label, codename))
 
     def has_change_permission(self):
         opts = self.opts
@@ -261,14 +264,16 @@ class InlineModelAdmin(ModelFormAdminView):
                 if field.rel and field.rel.to != self.parent_model:
                     opts = field.rel.to._meta
                     break
-        return self.user.has_perm(
-            opts.app_label + '.' + get_permission_codename('change', self.opts))
+
+        codename = get_permission_codename('change', opts)
+        return self.user.has_perm("%s.%s" % (opts.app_label, codename))
 
     def has_delete_permission(self):
         if self.opts.auto_created:
             return self.has_change_permission()
-        return self.user.has_perm(
-            self.opts.app_label + '.' +get_permission_codename('delete', self.opts))
+
+        codename = get_permission_codename('delete', self.opts)
+        return self.user.has_perm("%s.%s" % (self.opts.app_label, codename))
 
 
 class GenericInlineModelAdmin(InlineModelAdmin):
@@ -299,9 +304,11 @@ class GenericInlineModelAdmin(InlineModelAdmin):
             "can_delete": can_delete,
             "can_order": False,
             "max_num": self.max_num,
-            "exclude": exclude
+            "exclude": exclude,
+            'fields': forms.ALL_FIELDS
         }
         defaults.update(kwargs)
+
         return generic_inlineformset_factory(self.model, **defaults)
 
 
@@ -410,8 +417,8 @@ class InlineFormsetPlugin(BaseAdminPlugin):
 
     def get_form_layout(self, layout):
         allow_blank = isinstance(self.admin_view, DetailAdminView)
-        fs = dict(
-            [(f.model, InlineFormset(f, allow_blank)) for f in self.formsets])
+        # fixed #176 bug, change dict to list
+        fs = [(f.model, InlineFormset(f, allow_blank)) for f in self.formsets]
         replace_inline_objects(layout, fs)
 
         if fs:
@@ -421,8 +428,9 @@ class InlineFormsetPlugin(BaseAdminPlugin):
             if not container:
                 container = layout
 
-            for fs in fs.values():
-                container.append(fs)
+            # fixed #176 bug, change dict to list
+            for key, value in fs:
+                container.append(value)
 
         return layout
 

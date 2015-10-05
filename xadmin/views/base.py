@@ -10,6 +10,7 @@ from django import forms
 from django.utils.encoding import force_unicode
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_permission_codename
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.urlresolvers import reverse
@@ -295,6 +296,7 @@ class CommAdminView(BaseAdminView):
     menu_template = 'xadmin/includes/sitemenu_default.html'
 
     site_title = None
+    site_footer = None
     global_models_icon = {}
     default_model_icon = None
     apps_label_title = {}
@@ -402,12 +404,16 @@ class CommAdminView(BaseAdminView):
 
             def filter_item(item):
                 if 'menus' in item:
+                    before_filter_length = len(item['menus'])
                     item['menus'] = [filter_item(
                         i) for i in item['menus'] if check_menu_permission(i)]
+                    after_filter_length = len(item['menus'])
+                    if after_filter_length == 0 and before_filter_length > 0:
+                        return None
                 return item
 
             nav_menu = [filter_item(item) for item in menus if check_menu_permission(item)]
-            nav_menu = filter(lambda i: bool(i['menus']), nav_menu)
+            nav_menu = filter(lambda x:x, nav_menu)
 
             if not settings.DEBUG:
                 self.request.session['nav_menu'] = json.dumps(nav_menu)
@@ -436,6 +442,7 @@ class CommAdminView(BaseAdminView):
             'menu_template': self.menu_template,
             'nav_menu': nav_menu,
             'site_title': self.site_title or _(u'Django Xadmin'),
+            'site_footer': self.site_footer or _(u'my-company.inc'),
             'breadcrumbs': self.get_breadcrumb()
         })
 
@@ -477,7 +484,7 @@ class ModelAdminView(CommAdminView):
         new_context = {
             "opts": self.opts,
             "app_label": self.app_label,
-            "module_name": self.model_name,
+            "model_name": self.model_name,
             "verbose_name": force_unicode(self.opts.verbose_name),
             'model_icon': self.get_model_icon(self.model),
         }
@@ -550,6 +557,7 @@ class ModelAdminView(CommAdminView):
         """
         return self.ordering or ()  # otherwise we might try to *None, which is bad ;)
 
+    @filter_hook
     def queryset(self):
         """
         Returns a QuerySet of all model instances that can be edited by the
@@ -558,14 +566,20 @@ class ModelAdminView(CommAdminView):
         return self.model._default_manager.get_queryset()
 
     def has_view_permission(self, obj=None):
-        return ('view' not in self.remove_permissions) and (self.user.has_perm('%s.view_%s' % self.model_info) or \
-            self.user.has_perm('%s.change_%s' % self.model_info))
+        view_codename = get_permission_codename('view', self.opts)
+        change_codename = get_permission_codename('change', self.opts)
+
+        return ('view' not in self.remove_permissions) and (self.user.has_perm('%s.%s' % (self.app_label, view_codename)) or \
+            self.user.has_perm('%s.%s' % (self.app_label, change_codename)))
 
     def has_add_permission(self):
-        return ('add' not in self.remove_permissions) and self.user.has_perm('%s.add_%s' % self.model_info)
+        codename = get_permission_codename('add', self.opts)
+        return ('add' not in self.remove_permissions) and self.user.has_perm('%s.%s' % (self.app_label, codename))
 
     def has_change_permission(self, obj=None):
-        return ('change' not in self.remove_permissions) and self.user.has_perm('%s.change_%s' % self.model_info)
+        codename = get_permission_codename('change', self.opts)
+        return ('change' not in self.remove_permissions) and self.user.has_perm('%s.%s' % (self.app_label, codename))
 
     def has_delete_permission(self, obj=None):
-        return ('delete' not in self.remove_permissions) and self.user.has_perm('%s.delete_%s' % self.model_info)
+        codename = get_permission_codename('delete', self.opts)
+        return ('delete' not in self.remove_permissions) and self.user.has_perm('%s.%s' % (self.app_label, codename))
