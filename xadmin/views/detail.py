@@ -45,6 +45,9 @@ class ShowField(Field):
             elif 'class' in self.attrs:
                 context['input_class'] = self.attrs['class']
 
+        rendered_fields = getattr(form, "rendered_fields")
+        if not rendered_fields:
+            rendered_fields = set([])
         html = ''
         for field, result in self.results:
             context['result'] = result
@@ -55,6 +58,11 @@ class ShowField(Field):
             else:
                 context['field'] = field
                 html += loader.render_to_string(self.template, context)
+
+            if not field in rendered_fields:
+                rendered_fields.add(field)
+
+        form.rendered_fields = rendered_fields
         return html
 
 
