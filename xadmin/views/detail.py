@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.db import models
-from django.forms.models import modelform_factory
+from django.forms.models import modelform_factory, modelform_defines_fields
 from django.http import Http404
 from django.template import loader
 from django.template.response import TemplateResponse
@@ -211,6 +211,10 @@ class DetailAdminView(ModelAdminView):
             "exclude": exclude,
         }
         defaults.update(kwargs)
+
+        if defaults['fields'] is None and not modelform_defines_fields(defaults['form']):
+            defaults['fields'] = forms.ALL_FIELDS
+
         return modelform_factory(self.model, **defaults)
 
     @filter_hook
