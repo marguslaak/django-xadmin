@@ -12,7 +12,7 @@
       <b>{{ formset.opts.verbose_name|title }}:</b>&nbsp;{% if fs.instance.pk %}{{ fs.instance }}{% else %}#<span class="formset-num">{{ forloop.counter }}</span>{% endif %}
     </div>
     <div class="panel-body formset-form">
-      {% crispy fs formset.formset.helper %}
+
     </div>
   </div>
 {% endblock formset_form %}

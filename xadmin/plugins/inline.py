@@ -23,12 +23,21 @@ class ShowField(Field):
 
     def render(self, form, form_style, context, template_pack=None):
         html = ''
+        rendered_fields = getattr(form, "rendered_fields")
+        if not rendered_fields:
+            rendered_fields = set([])
+
         detail = form.detail
         for field in self.fields:
             if not isinstance(form.fields[field].widget, forms.HiddenInput):
                 result = detail.get_field_result(field)
                 html += loader.render_to_string(
                     self.template, {'field': form[field], 'result': result})
+
+                if not field in rendered_fields:
+                    rendered_fields.add(field)
+
+        form.rendered_fields = rendered_fields
         return html
 
 
