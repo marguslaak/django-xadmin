@@ -26,12 +26,11 @@
     window.__admin_language_code__ = "{{LANGUAGE_CODE}}";
   </script>
   <script type="text/javascript" src="{% url 'xadmin:jsi18n' %}"></script>
-  {% vendor 'jquery-ui-sortable.js' 'bootstrap.js' 'xadmin.main.js' 'xadmin.responsive.js' %}
-  {{ media.js }}
   {% block extrahead %}{% endblock %}
   {% view_block 'extrahead' %}
 </head>
 <body class="{% block bodyclass %}{% endblock %}">
+  {% vendor 'jquery-ui-sortable.js' 'bootstrap.js' 'xadmin.main.js' 'xadmin.responsive.js' %}
   {% block body %}
     <div id="content-block" class="col-sm-12">
     {% block content %}{% endblock content %}
@@ -39,5 +38,6 @@
   {% endblock body %}
   {% block extrabody %}{% endblock %}
   {% view_block 'extrabody' %}
+  {{ media.js }}
 </body>
 </html>
