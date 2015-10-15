@@ -2,10 +2,13 @@
 from django.contrib.auth.models import User
 
 from base import BaseTest
+from django.core.urlresolvers import reverse
 from xadmin.views import BaseAdminView, BaseAdminPlugin, ModelAdminView, ListAdminView
 
-from models import ModelA, ModelB
-from adminx import site, ModelAAdmin, TestBaseView, TestCommView, TestAView, OptionA
+from models import ModelA, ModelB, ModelPrimary, ModelSecondary
+from adminx import site, normal_site, ModelAAdmin, TestBaseView, TestCommView, \
+    TestAView, OptionA, ModelSecondaryAdmin, ModelPrimaryAdmin
+from xadmin.plugins.relate import RELATE_PREFIX
 
 class BaseAdminTest(BaseTest):
 
@@ -59,6 +62,45 @@ class CommAdminTest(BaseTest):
         self.assertEqual(self.test_view.get_model_icon(ModelB), 'test')
 
 
+from django.test import Client
+from django.test.client import RequestFactory
+from django.contrib.auth.models import User
+class RelatedPluginTest(BaseTest):
+    urls = "normal_urls"
 
+    def setUp(self):
+        super(RelatedPluginTest, self).setUp()
+        p1 = ModelPrimary()
+        p1.name = "primary1"
+        p1.save()
 
+        p2 = ModelPrimary()
+        p2.name = "primary2"
+        p2.save()
+
+        s1 = ModelSecondary()
+        s1.name = "secondary1"
+        s1.related = p1
+        s1.save()
+
+        s2 = ModelSecondary()
+        s2.name = "secondary2"
+        s2.related = p2
+        s2.save()
+
+        self.p1 = p1
+
+        self.factory = RequestFactory()
+        self.user = User.objects.create_superuser(username="admin", email="test@test.com", password="password")
+        self.user.save()
+        self.client = Client()
+        self.client.login(username="admin", password="password")
+
+    def test_related_filter(self):
+        response = self.client.get("/xadmin/view_base/modelprimary/")
+        url = reverse('xadmin:view_base_modelsecondary_changelist')
+        lookup_name = "related__id__exact"
+        lookup = RELATE_PREFIX + lookup_name
+
+        self.assertContains(response, "href=\"%s?%s=%s\"" % (url, lookup, self.p1.pk))
 

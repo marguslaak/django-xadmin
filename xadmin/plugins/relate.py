@@ -42,12 +42,15 @@ class RelateMenuPlugin(BaseAdminPlugin):
     def related_link(self, instance):
         links = []
         for r, view_perm, add_perm in self.get_related_list():
-            label = r.opts.app_label
-            model_name = r.opts.model_name
+            m = r.related_model._meta
+            label = m.app_label
+            model_name = m.model_name
+            # label = r.opts.app_label
+            # model_name = r.opts.model_name
             f = r.field
             rel_name = f.rel.get_related_field().name
 
-            verbose_name = force_unicode(r.opts.verbose_name)
+            verbose_name = force_unicode(m.verbose_name)
             lookup_name = '%s__%s__exact' % (f.name, rel_name)
 
             link = ''.join(('<li class="with_menu_btn">',
@@ -70,7 +73,11 @@ class RelateMenuPlugin(BaseAdminPlugin):
             links.append(link)
         ul_html = '<ul class="dropdown-menu" role="menu">%s</ul>' % ''.join(
             links)
-        return '<div class="dropdown related_menu pull-right"><a title="%s" class="relate_menu dropdown-toggle" data-toggle="dropdown"><i class="icon fa fa-list"></i></a>%s</div>' % (_('Related Objects'), ul_html)
+
+        ret = '<div class="dropdown related_menu pull-right"><a title="%s" ' \
+              'class="relate_menu dropdown-toggle" data-toggle="dropdown"><i ' \
+              'class="icon fa fa-list"></i></a>%s</div>' % (_('Related Objects'), ul_html)
+        return ret
     related_link.short_description = '&nbsp;'
     related_link.allow_tags = True
     related_link.allow_export = False
