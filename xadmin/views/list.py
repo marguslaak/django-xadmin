@@ -12,8 +12,11 @@ from django.utils.text import capfirst
 from django.utils.translation import ugettext as _
 
 from xadmin.util import lookup_field, display_for_field, label_for_field, boolean_icon
+from xadmin.sites import site
+from django.core.urlresolvers import reverse, NoReverseMatch
 
-from base import ModelAdminView, filter_hook, inclusion_tag, csrf_protect_m
+from base import ModelAdminView, filter_hook, inclusion_tag, csrf_protect_m, \
+    BaseAdminObject
 
 # List settings
 ALL_VAR = 'all'
@@ -564,8 +567,18 @@ class ListAdminView(ModelAdminView):
             item.attr = attr
             item.value = value
 
+        rel_obj = None
+        if field_name in self.list_display_links:
+            if hasattr(item.field, 'rel') and isinstance(item.field.rel, models.ManyToOneRel):
+                rel_obj = getattr(obj, field_name)
+
+        if rel_obj:
+            self.related_object_display_links(item, rel_obj)
+            item.is_display_link = True
+            item.row['is_display_first'] = False
+
         # If list_display_links not defined, add the link tag to the first field
-        if (item.row['is_display_first'] and not self.list_display_links) \
+        elif (item.row['is_display_first'] and not self.list_display_links) \
                 or field_name in self.list_display_links:
             item.row['is_display_first'] = False
             item.is_display_link = True
@@ -583,6 +596,41 @@ class ListAdminView(ModelAdminView):
                 item.wraps.append(u'<a href="%s">%%s</a>' % url)
 
         return item
+
+    def related_object_display_links(self, item, rel_obj):
+        has_view_perm = False
+        has_change_perm = False
+        if rel_obj.__class__ in site._registry:
+            # request = self.request
+            # model_admin = site._registry[rel_obj.__class__]
+            # has_view_perm = model_admin(request).has_view_permission(rel_obj)
+            # has_change_perm = model_admin(request).has_change_permission(rel_obj)
+            base_obj = BaseAdminObject()
+            has_view_perm = base_obj.has_model_perm(rel_obj.__class__, 'view', self.user)
+            has_change_perm = base_obj.has_model_perm(rel_obj.__class__, 'change', self.user)
+
+        if rel_obj and has_view_perm:
+            opts = rel_obj._meta
+            app_name = site.app_name
+            model_name = rel_obj._meta.model_name
+            try:
+                item_res_uri = reverse(
+                    '%s:%s_%s_detail' % (app_name,
+                                         opts.app_label, model_name),
+                    args=(getattr(rel_obj, opts.pk.attname),))
+                if item_res_uri:
+                    if has_change_perm:
+                        edit_url = reverse(
+                            '%s:%s_%s_change' % (app_name, opts.app_label, model_name),
+                            args=(getattr(rel_obj, opts.pk.attname),))
+                    else:
+                        edit_url = ''
+                    print item_res_uri
+                    item.wraps.append('<a data-res-uri="%s" data-edit-uri="%s" class="details-handler" rel="tooltip" title="%s">%%s</a>'
+                                     % (item_res_uri, edit_url, _(u'Details of %s') % str(rel_obj)))
+            except NoReverseMatch:
+                pass
+
 
     @filter_hook
     def result_row(self, obj):
