@@ -419,11 +419,13 @@ class CommAdminView(BaseAdminView):
                 self.request.session['nav_menu'] = json.dumps(nav_menu)
                 self.request.session.modified = True
 
-        def check_selected(menu, path):
+        def check_selected(menu, request):
+            path = request.path
             selected = False
             if 'url' in menu:
                 if menu.get("exact_match", False):
                     chop_index = -1
+                    path = request.get_full_path()
                 else:
                     chop_index = menu['url'].find('?')
 
@@ -433,14 +435,15 @@ class CommAdminView(BaseAdminView):
                     selected = path.startswith(menu['url'][:chop_index])
             if 'menus' in menu:
                 for m in menu['menus']:
-                    _s = check_selected(m, path)
+                    _s = check_selected(m, request)
                     if _s:
                         selected = True
+
             if selected:
                 menu['selected'] = True
             return selected
         for menu in nav_menu:
-            check_selected(menu, self.request.path)
+            check_selected(menu, self.request)
 
         context.update({
             'menu_template': self.menu_template,
