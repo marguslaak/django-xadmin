@@ -422,7 +422,11 @@ class CommAdminView(BaseAdminView):
         def check_selected(menu, path):
             selected = False
             if 'url' in menu:
-                chop_index = menu['url'].find('?')
+                if menu.get("exact_match", False):
+                    chop_index = -1
+                else:
+                    chop_index = menu['url'].find('?')
+
                 if chop_index == -1:
                     selected = path.startswith(menu['url'])
                 else:
